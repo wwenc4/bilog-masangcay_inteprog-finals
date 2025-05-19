@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <iostream>
 #include <string>
 using namespace std;
@@ -70,3 +71,9 @@ int main() {
 
     return 0;
 }
+=======
+#include <iostream>
+using namespace std;
+
+
+>>>>>>> 31a97524519a69acf3f121dc204246adb9b4c863
