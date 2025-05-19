@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 #include <iostream>
 #include <string>
 using namespace std;
@@ -73,10 +70,4 @@ int main() {
 
     return 0;
 }
-=======
-#include <iostream>
-using namespace std;
 
-
->>>>>>> 31a97524519a69acf3f121dc204246adb9b4c863
->>>>>>> ff19332f6c07ae677f1ef97a6fc68be808abaa07
