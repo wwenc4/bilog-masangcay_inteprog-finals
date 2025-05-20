@@ -8,8 +8,75 @@
 
 using namespace std;
 
-// Forward declarations
-void showRoomTypes();
+// Room struct
+struct Room {
+    int roomNumber;
+    string roomType;
+    bool isAvailable;
+
+    string serialize() const {
+        stringstream ss;
+        ss << roomNumber << "," << roomType << "," << isAvailable;
+        return ss.str();
+    }
+
+    static Room deserialize(const string& line) {
+        Room r;
+        stringstream ss(line);
+        string temp;
+        getline(ss, temp, ',');
+        r.roomNumber = stoi(temp);
+        getline(ss, r.roomType, ',');
+        getline(ss, temp);
+        r.isAvailable = stoi(temp);
+        return r;
+    }
+};
+
+vector<Room> loadRoomsFromFile(const string& filename) {
+    vector<Room> rooms;
+    ifstream inFile(filename);
+    string line;
+    while (getline(inFile, line)) {
+        if (!line.empty()) {
+            rooms.push_back(Room::deserialize(line));
+        }
+    }
+    inFile.close();
+    return rooms;
+}
+
+void showRoomTypes() {
+    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+
+    cout << "\nAvailable Rooms:\n";
+    for (const auto& room : rooms) {
+        if (room.isAvailable) {
+            cout << "Room Number: " << room.roomNumber
+                 << " | Type: " << room.roomType << endl;
+        }
+    }
+}
+
+void showAvailableRooms() {
+    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+    cout << "\nList of Available Rooms:\n";
+    cout << left << setw(15) << "Room Number" << setw(20) << "Room Type" << endl;
+    cout << "-----------------------------------\n";
+    for (const auto& room : rooms) {
+        if (room.isAvailable) {
+            cout << left << setw(15) << room.roomNumber << setw(20) << room.roomType << endl;
+        }
+    }
+}
+
+// General room type descriptions (hardcoded)
+void showRoomTypeGeneral() {
+    cout << "\nWe have the following room types available:\n";
+    cout << "1. Single Room - $100 per night\n";
+    cout << "2. Double Room - $150 per night\n";
+    cout << "3. Suite - $250 per night\n";
+}
 
 // Booking Struct
 struct Booking {
@@ -80,7 +147,7 @@ public:
         int choice;
         do {
             cout << "\nAdmin Menu for " << username << ":\n";
-            cout << "1. Manage bookings\n2. View reports\n3. Logout\n";
+           cout << "1. View available rooms\n2. Book a room by room number\n3.Logout";
             cout << "Enter your choice: ";
             
             while (!(cin >> choice)) {
@@ -123,7 +190,7 @@ public:
         int choice;
         do {
             cout << "\nGuest Menu for " << username << ":\n";
-            cout << "1. View room types\n2. Make a booking\n3. View My Reservations\n4. Logout\n";
+            cout << "1. View room types\n2. Make a booking\n3. View My Reservations\n4. View Available Rooms\n5. Logout\n";
             cout << "Enter your choice: ";
             
             while (!(cin >> choice)) {
@@ -142,6 +209,9 @@ public:
                     viewMyBookings();
                     break;
                 case 4:
+                    showAvailableRooms();
+                    break;
+                case 5:
                     cout << "Logging out..." << endl;
                     return;
                 default:
@@ -156,7 +226,7 @@ public:
 
 private:
     void viewRoomTypesAndOptionallyBook() {
-        showRoomTypes();
+        showRoomTypeGeneral();
         int subChoice;
         cout << "\n1. Book a room\n2. Return to menu\n";
         cout << "Enter choice: ";
@@ -174,42 +244,73 @@ private:
     }
 
     void makeAndStoreBooking() {
-        int roomChoice;
-        int nights;
-        double rate = 0.0;
-        string roomType;
-        showRoomTypes();
-        cout << "\nEnter room type to book (1-3): ";
-        while (!(cin >> roomChoice) || roomChoice < 1 || roomChoice > 3) {
-            cout << "Invalid choice. Please enter 1, 2, or 3: ";
-            clearInputBuffer();
-        }
+    showAvailableRooms();
 
-        switch (roomChoice) {
-            case 1: roomType = "Single Room"; rate = 100.0; break;
-            case 2: roomType = "Double Room"; rate = 150.0; break;
-            case 3: roomType = "Suite"; rate = 250.0; break;
-        }
-
-        cout << "Enter number of nights: ";
-        while (!(cin >> nights) || nights <= 0) {
-            cout << "Please enter a valid number of nights: ";
-            clearInputBuffer();
-        }
-
-        double totalCost = rate * nights;
-
-        Booking b { username, roomType, nights, totalCost };
-        bookings.push_back(b);
-
-        cout << "Booking confirmed for " << roomType
-             << " for " << nights << " nights. Total: $"
-             << fixed << setprecision(2) << totalCost << "\n";
-        cout << "Your booking details have been saved.\n";
-
-        saveBookingsToFile();
-        cout << "Returning to menu..." << endl;
+    int roomNum;
+    cout << "\nEnter the room number you wish to book: ";
+    while (!(cin >> roomNum)) {
+        cout << "Invalid input. Please enter a room number: ";
+        clearInputBuffer();
     }
+
+    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+    bool found = false;
+    Room selectedRoom;
+
+    for (auto& room : rooms) {
+        if (room.roomNumber == roomNum && room.isAvailable) {
+            selectedRoom = room;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        cout << "Room not available or doesn't exist. Please try again.\n";
+        return;
+    }
+
+    int nights;
+    cout << "Enter number of nights: ";
+    while (!(cin >> nights) || nights <= 0) {
+        cout << "Please enter a valid number of nights: ";
+        clearInputBuffer();
+    }
+
+    double rate;
+    if (selectedRoom.roomType == "Single Room") rate = 100.0;
+    else if (selectedRoom.roomType == "Double Room") rate = 150.0;
+    else if (selectedRoom.roomType == "Suite") rate = 250.0;
+    else rate = 120.0; // default/fallback
+
+    double totalCost = rate * nights;
+
+    Booking b { username, selectedRoom.roomType, nights, totalCost };
+    bookings.push_back(b);
+
+    cout << "Booking confirmed for Room #" << selectedRoom.roomNumber << " (" << selectedRoom.roomType << ") for "
+         << nights << " nights. Total: $" << fixed << setprecision(2) << totalCost << "\n";
+
+    // Update room availability
+    for (auto& room : rooms) {
+        if (room.roomNumber == selectedRoom.roomNumber) {
+            room.isAvailable = false;
+            break;
+        }
+    }
+
+    // Save updated room availability
+    ofstream outFile("rooms.txt");
+    for (const auto& room : rooms) {
+        outFile << room.serialize() << endl;
+    }
+    outFile.close();
+
+    // Save booking
+    saveBookingsToFile();
+    cout << "Returning to menu..." << endl;
+}
+
 
     void viewMyBookings() {
         if (bookings.empty()) {
@@ -259,14 +360,6 @@ private:
         inFile.close();
     }
 };
-
-// Room options display
-void showRoomTypes() {
-    cout << "\nWe have the following room types available:\n";
-    cout << "1. Single Room - $100 per night\n";
-    cout << "2. Double Room - $150 per night\n";
-    cout << "3. Suite - $250 per night\n";
-}
 
 // Decorative banner
 void Banner() {
