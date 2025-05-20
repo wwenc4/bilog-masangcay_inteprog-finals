@@ -1,11 +1,48 @@
 #include <iostream>
 #include <string>
-#include <limits> // For numeric_limits
+#include <vector>
+#include <sstream>
+#include <limits>
+#include <fstream>
+#include <iomanip> // for setprecision
+
 using namespace std;
 
 // Forward declarations
 void showRoomTypes();
-void makeBooking();
+
+// Booking Struct
+struct Booking {
+    string guestName;
+    string roomType;
+    int nights;
+    double totalCost;
+
+    string serialize() const {
+        stringstream ss;
+        ss << guestName << "," << roomType << "," << nights << "," << fixed << setprecision(2) << totalCost;
+        return ss.str();
+    }
+
+    static Booking deserialize(const string& line) {
+        Booking b;
+        stringstream ss(line);
+        string temp;
+
+        getline(ss, b.guestName, ',');
+        getline(ss, b.roomType, ',');
+
+        getline(ss, temp, ',');
+        if (temp.empty()) throw invalid_argument("Invalid nights value");
+        b.nights = stoi(temp);
+
+        getline(ss, temp, ',');
+        if (temp.empty()) throw invalid_argument("Invalid total cost value");
+        b.totalCost = stod(temp);
+
+        return b;
+    }
+};
 
 // Base User class
 class User {
@@ -74,14 +111,19 @@ public:
 
 // Guest class
 class Guest : public User {
+private:
+    vector<Booking> bookings;
+
 public:
-    Guest(const string& uname) : User(uname) {}
+    Guest(const string& uname) : User(uname) {
+        loadBookingsFromFile();
+    }
 
     void showMenu() override {
         int choice;
         do {
             cout << "\nGuest Menu for " << username << ":\n";
-            cout << "1. View room types\n2. Make a booking\n3. Logout\n";
+            cout << "1. View room types\n2. Make a booking\n3. View My Reservations\n4. Logout\n";
             cout << "Enter your choice: ";
             
             while (!(cin >> choice)) {
@@ -91,13 +133,15 @@ public:
 
             switch (choice) {
                 case 1:
-                    showRoomTypes();
-                    handleRoomTypeSelection();
+                    viewRoomTypesAndOptionallyBook();
                     break;
                 case 2:
-                    makeBooking();
+                    makeAndStoreBooking();
                     break;
                 case 3:
+                    viewMyBookings();
+                    break;
+                case 4:
                     cout << "Logging out..." << endl;
                     return;
                 default:
@@ -111,7 +155,8 @@ public:
     }
 
 private:
-    void handleRoomTypeSelection() {
+    void viewRoomTypesAndOptionallyBook() {
+        showRoomTypes();
         int subChoice;
         cout << "\n1. Book a room\n2. Return to menu\n";
         cout << "Enter choice: ";
@@ -122,10 +167,96 @@ private:
         }
 
         if (subChoice == 1) {
-            makeBooking();
+            makeAndStoreBooking();
         } else {
             cout << "Returning to menu..." << endl;
         }
+    }
+
+    void makeAndStoreBooking() {
+        int roomChoice;
+        int nights;
+        double rate = 0.0;
+        string roomType;
+        showRoomTypes();
+        cout << "\nEnter room type to book (1-3): ";
+        while (!(cin >> roomChoice) || roomChoice < 1 || roomChoice > 3) {
+            cout << "Invalid choice. Please enter 1, 2, or 3: ";
+            clearInputBuffer();
+        }
+
+        switch (roomChoice) {
+            case 1: roomType = "Single Room"; rate = 100.0; break;
+            case 2: roomType = "Double Room"; rate = 150.0; break;
+            case 3: roomType = "Suite"; rate = 250.0; break;
+        }
+
+        cout << "Enter number of nights: ";
+        while (!(cin >> nights) || nights <= 0) {
+            cout << "Please enter a valid number of nights: ";
+            clearInputBuffer();
+        }
+
+        double totalCost = rate * nights;
+
+        Booking b { username, roomType, nights, totalCost };
+        bookings.push_back(b);
+
+        cout << "Booking confirmed for " << roomType
+             << " for " << nights << " nights. Total: $"
+             << fixed << setprecision(2) << totalCost << "\n";
+        cout << "Your booking details have been saved.\n";
+
+        saveBookingsToFile();
+        cout << "Returning to menu..." << endl;
+    }
+
+    void viewMyBookings() {
+        if (bookings.empty()) {
+            cout << "You have no bookings yet.\n";
+        } else {
+            cout << "\nYour current bookings:\n";
+            for (size_t i = 0; i < bookings.size(); ++i) {
+                cout << i + 1 << ". " << bookings[i].roomType
+                     << " | Nights: " << bookings[i].nights
+                     << " | Total: $" << fixed << setprecision(2) << bookings[i].totalCost << "\n";
+            }
+        }
+    }
+
+    void saveBookingsToFile() {
+        ofstream outFile("bookings.txt", ios::app); // append mode
+        if (!outFile) {
+            cerr << "Error opening bookings.txt for writing.\n";
+            return;
+        }
+        for (const auto& b : bookings) {
+            outFile << b.serialize() << endl;
+        }
+        outFile.close();
+    }
+
+    void loadBookingsFromFile() {
+        ifstream inFile("bookings.txt");
+        if (!inFile) {
+            cerr << "Error opening bookings.txt for reading.\n";
+            return;
+        }
+
+        string line;
+        while (getline(inFile, line)) {
+            if (line.empty()) continue;
+            try {
+                Booking b = Booking::deserialize(line);
+                if (b.guestName == username) {
+                    bookings.push_back(b);
+                }
+            } catch (const exception& e) {
+                cerr << "Skipping invalid line: " << line << " (" << e.what() << ")\n";
+            }
+        }
+
+        inFile.close();
     }
 };
 
@@ -135,26 +266,6 @@ void showRoomTypes() {
     cout << "1. Single Room - $100 per night\n";
     cout << "2. Double Room - $150 per night\n";
     cout << "3. Suite - $250 per night\n";
-}
-
-// Booking function
-void makeBooking() {
-    cout << "\nEnter room type to book (1-3): ";
-    int roomChoice;
-    while (!(cin >> roomChoice) || roomChoice < 1 || roomChoice > 3) {
-        cout << "Invalid choice. Please enter 1, 2, or 3: ";
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    }
-    
-    string roomType;
-    switch (roomChoice) {
-        case 1: roomType = "Single Room"; break;
-        case 2: roomType = "Double Room"; break;
-        case 3: roomType = "Suite"; break;
-    }
-    
-    cout << "Booking confirmed for " << roomType << "!" << endl;
 }
 
 // Decorative banner
@@ -202,7 +313,7 @@ int main() {
             cout << "Enter your name: ";
             cin.ignore();
             getline(cin, guestName);
-            
+
             Guest guest(guestName);
             cout << "Welcome, " << guest.getUsername() << "!" << endl;
             guest.showMenu();
