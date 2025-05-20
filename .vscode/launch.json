@@ -2,23 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug C++ (macOS)",
+            "name": "Run C++ (inteprog_finals)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/inteprog_finals",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": false,
+            "externalConsole": true,  // This is the key to fix terminal input issues
             "MIMode": "lldb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for LLDB",
-                    "text": "settings set target.print-summary-depth 10",
-                    "ignoreFailures": true
-                }
-            ]
+            "preLaunchTask": "build inteprog_finals"
         }
     ]
 }
