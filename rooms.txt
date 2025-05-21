@@ -4,3 +4,4 @@
 202,Double,1
 301,Suite,1
 302,Suite,1
+405,Single Room,1
