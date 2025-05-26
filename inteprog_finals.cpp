@@ -16,7 +16,7 @@ struct Room {
     string serialize() const {
         stringstream ss;
         ss << roomNumber << "," << roomType << "," << isAvailable;
-        return ss.str();
+        return ss.str(); 
     }
 
     static Room deserialize(const string& line) {
@@ -280,7 +280,7 @@ public:
 User* login() {
     string name, pass;
     char type;
-    cout << "\nLogin as (a)dmin or (g)uest? ";
+    cout << "\nLogin as Admin or Guest? >> [a/g]: ";
     cin >> type;
     cin.ignore();
 
@@ -289,7 +289,7 @@ User* login() {
         getline(cin, name);
         cout << "Password: ";
         getline(cin, pass);
-        if (name == "admin" && pass == "password") return new Admin(name);
+        if (name == "dane" || "raymund" && pass == "A1234!") return new Admin(name);
         cout << "Invalid admin credentials.\n";
         return nullptr;
     } else if (type == 'g') {
