@@ -3,5 +3,5 @@
 201,Double,1
 202,Double,1
 301,Suite,1
-302,Suite,0
-406,Single,0
+302,Suite,1
+406,Single,1

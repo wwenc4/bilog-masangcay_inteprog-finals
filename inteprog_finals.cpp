@@ -216,6 +216,58 @@ void makeBooking(const string& guestName) {
          << "\nTotal Cost: $" << fixed << setprecision(2) << booking.totalCost << endl;
 }
 
+void cancelBooking(const string& guestName){
+    vector<Booking> bookings;
+    ifstream inFile("bookings.txt");
+    string line;
+    while (getline(inFile, line)) {
+        bookings.push_back(Booking::deserialize(line));
+    }
+    inFile.close();
+
+    if(bookings.empty()) {
+        cout << "No bookings found.\n";
+        return;
+    }
+
+    int roomNum;
+    cout << "Enter room number to cancel booking: ";
+    cin >> roomNum;
+
+    bool found = false;
+    vector<Booking> updatedBookings;
+    for (const Booking& b : bookings) {
+        if (b.guestName == guestName && b.roomNumber == roomNum) {
+            found = true;
+            // skip this booking (i.e., cancel it)
+        } else {
+            updatedBookings.push_back(b);
+        }
+    }
+
+    if (!found) {
+        cout << "Booking not found.\n";
+        return;
+    }
+
+    // Update the room's availability
+    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+    for (Room& room : rooms){
+        if(room.roomNumber == roomNum){
+            room.isAvailable = true;
+            break;
+        }
+    }
+    saveRoomsToFile(rooms, "rooms.txt");
+
+    // Update bookings
+    ofstream outFile("bookings.txt");
+    for (const Booking& b : updatedBookings){
+        outFile << b.serialize() << endl;
+    }
+    cout << "Booking has been cancelled.\n";
+}
+
 // --------- User System ---------
 class User {
 protected:
@@ -247,7 +299,7 @@ public:
             }
         } while (true);
     }
-
+    
     void describeRole() override {
         cout << username << " is an Admin with full access.\n";
     }
@@ -260,13 +312,14 @@ public:
     void showMenu() override {
         int choice;
         do {
-            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Make Booking\n3. Logout\nChoice: ";
+            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Make Booking\n3. Cancel Booking\n4. Logout\nChoice: ";
             cin >> choice;
 
             switch (choice) {
                 case 1: showAvailableRooms(); break;
                 case 2: makeBooking(username); break;
-                case 3: return;
+                case 3: cancelBooking(username); break;
+                case 4: return;
                 default: cout << "Invalid choice.\n";
             }
         } while (true);
@@ -306,13 +359,20 @@ User* login() {
 int main() {
     cout << "Welcome to the Hotel Management System\n";
 
-    User* user = nullptr;
-    while (!user) user = login();
+    while (true) {
+        User* user = nullptr;
 
-    user->describeRole();
-    user->showMenu();
+        // Keep prompting login until successful
+        while (!user) {
+            user = login();
+        }
 
-    delete user;
-    cout << "Goodbye!\n";
+        user->describeRole();
+        user->showMenu();  //dis gon loop da user mwehe
+
+        delete user;
+        cout << "\nLogging out...\nReturning to login screen.\n";
+    }
+
     return 0;
 }
