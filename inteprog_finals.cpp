@@ -7,7 +7,6 @@
 #include <iomanip>
 using namespace std;
 
-// --------- Room Struct ---------
 struct Room {
     int roomNumber;
     string roomType;
@@ -37,7 +36,6 @@ struct Room {
     }
 };
 
-// --------- Booking Struct ---------
 struct Booking {
     string guestName;
     int roomNumber;
@@ -69,8 +67,6 @@ struct Booking {
         return b;
     }
 };
-
-// --------- File Functions ---------
 vector<Room> loadRoomsFromFile(const string& filename) {
     vector<Room> rooms;
     ifstream inFile(filename);
@@ -88,13 +84,35 @@ void saveRoomsToFile(const vector<Room>& rooms, const string& filename) {
     }
 }
 
-// --------- Room Management ---------
 void showAvailableRooms() {
     vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+    vector<Booking> bookings;
+    ifstream bookingFile("bookings.txt");
+    string line;
+
+    while (getline(bookingFile, line)) {
+        bookings.push_back(Booking::deserialize(line));
+    }
+
     cout << "\nAvailable Rooms:\n";
     for (const Room& room : rooms) {
         if (room.isAvailable) {
             cout << "Room " << room.roomNumber << " (" << room.roomType << ")\n";
+        }
+    }
+
+    cout << "----------------------------\n";
+    cout << "Occupied Rooms:\n";
+    for (const Room& room : rooms) {
+        if (!room.isAvailable) {
+            string guestName = "Unknown";
+            for (const Booking& booking : bookings) {
+                if (booking.roomNumber == room.roomNumber) {
+                    guestName = booking.guestName;
+                    break;
+                }
+            }
+            cout << "Room " << room.roomNumber << " (" << room.roomType << ") - Occupied by " << guestName << "\n";
         }
     }
 }
@@ -239,7 +257,6 @@ void cancelBooking(const string& guestName){
     for (const Booking& b : bookings) {
         if (b.guestName == guestName && b.roomNumber == roomNum) {
             found = true;
-            // skip this booking (i.e., cancel it)
         } else {
             updatedBookings.push_back(b);
         }
@@ -268,7 +285,93 @@ void cancelBooking(const string& guestName){
     cout << "Booking has been cancelled.\n";
 }
 
-// --------- User System ---------
+void showAllBookings(){
+    ifstream inFile("bookings.txt");
+    if (!inFile){
+        cout<<"No bookings found,\n";
+        return;
+    }
+
+    string line;
+    cout << "\nAll Bookings:\n";
+    while (getline(inFile, line)){
+        Booking b = Booking::deserialize(line);
+        if (b.roomNumber != -1){
+            cout << "Name: " << b.guestName
+                 << ", Room " << b.roomNumber
+                 << ", Nights: " << b.nights
+                 << ", Total Cost: $" << fixed << setprecision(2) << b.totalCost << endl;
+        }
+    }
+}
+
+void cancelBookingByAdmin() {
+    
+    showAllBookings();
+
+    vector<Booking> bookings;
+    ifstream inFile("bookings.txt");
+    string line;
+    while (getline(inFile, line)) {
+        bookings.push_back(Booking::deserialize(line));
+    }
+    inFile.close();
+
+    if (bookings.empty()) {
+        cout << "No bookings found.\n";
+        return;
+    }
+
+    string guestName;
+    int roomNumber;
+    cout << "Enter guest name: ";
+    cin.ignore();
+    getline(cin, guestName);
+    cout << "Enter room number to cancel: ";
+    cin >> roomNumber;
+
+    bool found = false;
+    vector<Booking> updatedBookings;
+    for (const Booking& b : bookings) {
+        if (b.guestName == guestName && b.roomNumber == roomNumber) {
+            found = true;
+            continue; // skip this booking
+        }
+        updatedBookings.push_back(b);
+    }
+
+    ofstream outFile("bookings.txt");
+    for (const Booking& b : updatedBookings) {
+        outFile << b.serialize() << endl;
+    }
+    outFile.close();
+
+    // Update room availability
+    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
+    for (Room& r : rooms) {
+        if (r.roomNumber == roomNumber) {
+            r.isAvailable = true;
+            break;
+        }
+    }
+    saveRoomsToFile(rooms, "rooms.txt");
+
+    if (found) {
+        cout << "Booking cancelled successfully.\n";
+    } else {
+        cout << "Booking not found.\n";
+    }
+}
+
+void makeBookingAdmin(){
+    cin.ignore();
+    string guest;
+    cout << "Enter guest name: ";
+    getline(cin, guest);
+    makeBooking(guest); 
+}
+
+
 class User {
 protected:
     string username;
@@ -286,20 +389,31 @@ public:
     void showMenu() override {
         int choice;
         do {
-            cout << "\nAdmin Menu:\n1. Show Available Rooms\n2. Create Room\n3. Delete Room\n4. Update Availability\n5. Logout\nChoice: ";
+            cout << "\nAdmin Menu:\n"
+                 << "1. Show Available & Occupied Rooms\n"
+                 << "2. Make Booking\n"
+                 << "3. Cancel Booking\n"
+                 << "4. Show All Bookings\n"
+                 << "5. Create Room\n"
+                 << "6. Delete Room\n"
+                 << "7. Update Room Availability\n"
+                 << "8. Logout\nChoice: ";
             cin >> choice;
 
             switch (choice) {
                 case 1: showAvailableRooms(); break;
-                case 2: createRoom(); break;
-                case 3: deleteRoom(); break;
-                case 4: updateRoomAvailability(); break;
-                case 5: return;
+                case 2: makeBookingAdmin(); break;
+                case 3: cancelBookingByAdmin(); break;
+                case 4: showAllBookings(); break;
+                case 5: createRoom(); break;
+                case 6: deleteRoom(); break;
+                case 7: updateRoomAvailability(); break;
+                case 8: return;
                 default: cout << "Invalid choice.\n";
             }
         } while (true);
     }
-    
+
     void describeRole() override {
         cout << username << " is an Admin with full access.\n";
     }
@@ -342,9 +456,11 @@ User* login() {
         getline(cin, name);
         cout << "Password: ";
         getline(cin, pass);
-        if (name == "dane" || "raymund" && pass == "A1234!") return new Admin(name);
-        cout << "Invalid admin credentials.\n";
-        return nullptr;
+        if ((name == "dane" || name == "raymund") && pass == "A1234!") return new Admin(name);
+        else if (!(name== "dane" && name != "raymund") || pass != "A1234!") {
+            cout << "Invalid admin credentials.\n";
+            return nullptr;
+        }
     } else if (type == 'g') {
         cout << "Enter your name: ";
         getline(cin, name);
@@ -355,14 +471,12 @@ User* login() {
     return nullptr;
 }
 
-// --------- Main ---------
 int main() {
     cout << "Welcome to the Hotel Management System\n";
 
     while (true) {
         User* user = nullptr;
 
-        // Keep prompting login until successful
         while (!user) {
             user = login();
         }
@@ -373,6 +487,5 @@ int main() {
         delete user;
         cout << "\nLogging out...\nReturning to login screen.\n";
     }
-
     return 0;
 }
