@@ -185,6 +185,12 @@ void updateRoomAvailability() {
     }
 }
 
+void showRoomRates() {
+    cout << "\nRoom Rates:\n";
+    cout << "Single: $100.00 per night\n";
+    cout << "Double: $150.00 per night\n";
+    cout << "Suite: $250.00 per night\n";
+}
 double getRoomRate(const string& type) {
     if (type == "Single") return 100.0;
     if (type == "Double") return 150.0;
@@ -426,14 +432,15 @@ public:
     void showMenu() override {
         int choice;
         do {
-            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Make Booking\n3. Cancel Booking\n4. Logout\nChoice: ";
+            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Show Room Rates\n3. Make Booking\n4. Cancel Booking\n5. Logout\nChoice: ";
             cin >> choice;
 
             switch (choice) {
                 case 1: showAvailableRooms(); break;
-                case 2: makeBooking(username); break;
-                case 3: cancelBooking(username); break;
-                case 4: return;
+                case 2: showRoomRates(); break;
+                case 3: makeBooking(username); break;
+                case 4: cancelBooking(username); break;
+                case 5: return;
                 default: cout << "Invalid choice.\n";
             }
         } while (true);
