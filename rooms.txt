@@ -1,5 +1,5 @@
-102,Single,1
-201,Double,1
+102,Single,0
+201,Double,0
 202,Double,1
 301,Suite,1
 302,Suite,1

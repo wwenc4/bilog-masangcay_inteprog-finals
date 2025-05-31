@@ -67,6 +67,7 @@ struct Booking {
         return b;
     }
 };
+
 vector<Room> loadRoomsFromFile(const string& filename) {
     vector<Room> rooms;
     ifstream inFile(filename);
@@ -227,11 +228,9 @@ void makeBooking(const string& guestName) {
     selectedRoom->isAvailable = false;
     saveRoomsToFile(rooms, "rooms.txt");
 
-    cout << "\nBooking confirmed!\n";
-    cout << "Receipt:\n";
-    cout << "Name: " << booking.guestName << "\nRoom: " << booking.roomNumber
-         << " (" << selectedRoom->roomType << ")\nNights: " << booking.nights
-         << "\nTotal Cost: $" << fixed << setprecision(2) << booking.totalCost << endl;
+    cout << "\nBooking confirmed!\nReceipt:\nName: " << booking.guestName
+         << "\nRoom: " << booking.roomNumber << " (" << selectedRoom->roomType
+         << ")\nNights: " << booking.nights << "\nTotal Cost: $" << fixed << setprecision(2) << booking.totalCost << endl;
 }
 
 void cancelBooking(const string& guestName){
@@ -240,12 +239,6 @@ void cancelBooking(const string& guestName){
     string line;
     while (getline(inFile, line)) {
         bookings.push_back(Booking::deserialize(line));
-    }
-    inFile.close();
-
-    if(bookings.empty()) {
-        cout << "No bookings found.\n";
-        return;
     }
 
     int roomNum;
@@ -267,7 +260,6 @@ void cancelBooking(const string& guestName){
         return;
     }
 
-    // Update the room's availability
     vector<Room> rooms = loadRoomsFromFile("rooms.txt");
     for (Room& room : rooms){
         if(room.roomNumber == roomNum){
@@ -277,7 +269,6 @@ void cancelBooking(const string& guestName){
     }
     saveRoomsToFile(rooms, "rooms.txt");
 
-    // Update bookings
     ofstream outFile("bookings.txt");
     for (const Booking& b : updatedBookings){
         outFile << b.serialize() << endl;
@@ -287,11 +278,6 @@ void cancelBooking(const string& guestName){
 
 void showAllBookings(){
     ifstream inFile("bookings.txt");
-    if (!inFile){
-        cout<<"No bookings found,\n";
-        return;
-    }
-
     string line;
     cout << "\nAll Bookings:\n";
     while (getline(inFile, line)){
@@ -306,7 +292,6 @@ void showAllBookings(){
 }
 
 void cancelBookingByAdmin() {
-    
     showAllBookings();
 
     vector<Booking> bookings;
@@ -314,12 +299,6 @@ void cancelBookingByAdmin() {
     string line;
     while (getline(inFile, line)) {
         bookings.push_back(Booking::deserialize(line));
-    }
-    inFile.close();
-
-    if (bookings.empty()) {
-        cout << "No bookings found.\n";
-        return;
     }
 
     string guestName;
@@ -335,7 +314,7 @@ void cancelBookingByAdmin() {
     for (const Booking& b : bookings) {
         if (b.guestName == guestName && b.roomNumber == roomNumber) {
             found = true;
-            continue; // skip this booking
+            continue;
         }
         updatedBookings.push_back(b);
     }
@@ -344,9 +323,7 @@ void cancelBookingByAdmin() {
     for (const Booking& b : updatedBookings) {
         outFile << b.serialize() << endl;
     }
-    outFile.close();
 
-    // Update room availability
     vector<Room> rooms = loadRoomsFromFile("rooms.txt");
     for (Room& r : rooms) {
         if (r.roomNumber == roomNumber) {
@@ -356,11 +333,8 @@ void cancelBookingByAdmin() {
     }
     saveRoomsToFile(rooms, "rooms.txt");
 
-    if (found) {
-        cout << "Booking cancelled successfully.\n";
-    } else {
-        cout << "Booking not found.\n";
-    }
+    if (found) cout << "Booking cancelled successfully.\n";
+    else cout << "Booking not found.\n";
 }
 
 void makeBookingAdmin(){
@@ -371,6 +345,30 @@ void makeBookingAdmin(){
     makeBooking(guest); 
 }
 
+void showGuestBookings(const string& guestName) {
+    ifstream inFile("bookings.txt");
+    if (!inFile) {
+        cout << "No bookings found.\n";
+        return;
+    }
+
+    string line;
+    bool found = false;
+    cout << "\nYour Bookings:\n";
+    while (getline(inFile, line)) {
+        Booking b = Booking::deserialize(line);
+        if (b.guestName == guestName && b.roomNumber != -1) {
+            cout << "Room " << b.roomNumber
+                 << ", Nights: " << b.nights
+                 << ", Total Cost: $" << fixed << setprecision(2) << b.totalCost << endl;
+            found = true;
+        }
+    }
+
+    if (!found) {
+        cout << "No bookings found for you.\n";
+    }
+}
 
 class User {
 protected:
@@ -426,14 +424,20 @@ public:
     void showMenu() override {
         int choice;
         do {
-            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Make Booking\n3. Cancel Booking\n4. Logout\nChoice: ";
+            cout << "\nGuest Menu:\n"
+                 << "1. Show Available Rooms\n"
+                 << "2. Make Booking\n"
+                 << "3. Cancel Booking\n"
+                 << "4. View My Bookings\n"
+                 << "5. Logout\nChoice: ";
             cin >> choice;
 
             switch (choice) {
                 case 1: showAvailableRooms(); break;
                 case 2: makeBooking(username); break;
                 case 3: cancelBooking(username); break;
-                case 4: return;
+                case 4: showGuestBookings(username); break;
+                case 5: return;
                 default: cout << "Invalid choice.\n";
             }
         } while (true);
@@ -457,7 +461,7 @@ User* login() {
         cout << "Password: ";
         getline(cin, pass);
         if ((name == "dane" || name == "raymund") && pass == "A1234!") return new Admin(name);
-        else if (!(name== "dane" && name != "raymund") || pass != "A1234!") {
+        else {
             cout << "Invalid admin credentials.\n";
             return nullptr;
         }
@@ -476,16 +480,16 @@ int main() {
 
     while (true) {
         User* user = nullptr;
-
         while (!user) {
             user = login();
         }
 
         user->describeRole();
-        user->showMenu();  //dis gon loop da user mwehe
+        user->showMenu();
 
         delete user;
         cout << "\nLogging out...\nReturning to login screen.\n";
     }
+
     return 0;
 }
