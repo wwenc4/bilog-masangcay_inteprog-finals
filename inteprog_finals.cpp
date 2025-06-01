@@ -88,13 +88,8 @@ void saveBookings(const vector<Booking>& bookings) {
     for (const auto& b : bookings) file << b.serialize() << "\n";
 }
 
-// ----------------- Utility -----------------
-double getRoomRate(const string& type) {
-    if (type == "Single") return 100.0;
-    if (type == "Double") return 150.0;
-    if (type == "Suite") return 250.0;
-    return 0.0;
-}
+
+
 
 // ----------------- User Classes -----------------
 class User {
@@ -137,6 +132,41 @@ void showAvailableRooms(User* user) {
         }
     }
 }
+// ----------------- Pricing Strategy Pattern -----------------
+class PricingStrategy {
+public:
+    virtual double calculate(int nights) = 0;
+    virtual ~PricingStrategy() = default;
+};
+
+class SingleRoomPricing : public PricingStrategy {
+public:
+    double calculate(int nights) override { return nights * 100; }
+};
+
+class DoubleRoomPricing : public PricingStrategy {
+public:
+    double calculate(int nights) override { return nights * 150; }
+};
+
+class SuiteRoomPricing : public PricingStrategy {
+public:
+    double calculate(int nights) override { return nights * 250; }
+};
+
+// Strategy chooser function
+double calculatePrice(const string& type, int nights) {
+    PricingStrategy* strategy = nullptr;
+
+    if (type == "Single") strategy = new SingleRoomPricing();
+    else if (type == "Double") strategy = new DoubleRoomPricing();
+    else if (type == "Suite") strategy = new SuiteRoomPricing();
+    else strategy = new SingleRoomPricing(); // fallback
+
+    double cost = strategy->calculate(nights);
+    delete strategy;
+    return cost;
+}
 
 void makeBooking(User* user) {
     auto rooms = loadRooms();
@@ -150,8 +180,7 @@ void makeBooking(User* user) {
 
     for (auto& room : rooms) {
         if (room.roomNumber == roomNum && room.isAvailable) {
-            double rate = getRoomRate(room.roomType);
-            double total = rate * nights;
+            double total = calculatePrice(room.roomType, nights);
             bookings.push_back({user->getUsername(), roomNum, nights, total});
             room.isAvailable = false;
             saveRooms(rooms);
