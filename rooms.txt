@@ -1,7 +1,8 @@
 102,Single,0
 201,Double,0
-202,Double,1
-301,Suite,1
-302,Suite,1
-406,Single,1
-101,single,1
+202,Double,0
+301,Suite,0
+302,Suite,0
+406,Single,0
+101,single,0
+231850768,,1
