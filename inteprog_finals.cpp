@@ -175,7 +175,6 @@ public:
     double calculate(int nights) override { return nights * 150; }
 };
 
-<<<<<<< HEAD
 // Pricing strategy for Suite rooms
 class SuiteRoomPricing : public PricingStrategy {
 public:
@@ -195,229 +194,6 @@ double calculatePrice(const string& type, int nights) {
     double cost = strategy->calculate(nights);
     delete strategy; // Clean up to prevent memory leak
     return cost;
-=======
-    if (found) {
-        cout << "Room deleted successfully.\n";
-    } else {
-        cout << "Room not found.\n";
-    }
-}
-
-void updateRoomAvailability() {
-    int roomNum;
-    cout << "Enter room number to update availability: ";
-    cin >> roomNum;
-
-    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
-    bool found = false;
-
-    for (Room& room : rooms) {
-        if (room.roomNumber == roomNum) {
-            room.isAvailable = !room.isAvailable;
-            cout << "Room is now " << (room.isAvailable ? "Available" : "Unavailable") << ".\n";
-            found = true;
-            break;
-        }
-    }
-
-    saveRoomsToFile(rooms, "rooms.txt");
-
-    if (!found) {
-        cout << "Room not found.\n";
-    }
-}
-
-void showRoomRates() {
-    cout << "\nRoom Rates:\n";
-    cout << "Single: $100.00 per night\n";
-    cout << "Double: $150.00 per night\n";
-    cout << "Suite: $250.00 per night\n";
-}
-double getRoomRate(const string& type) {
-    if (type == "Single") return 100.0;
-    if (type == "Double") return 150.0;
-    if (type == "Suite") return 250.0;
-    return 0.0;
-}
-
-void makeBooking(const string& guestName) {
-    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
-    showAvailableRooms();
-
-    int roomNum;
-    cout << "Enter room number to book: ";
-    cin >> roomNum;
-
-    Room* selectedRoom = nullptr;
-    for (Room& room : rooms) {
-        if (room.roomNumber == roomNum && room.isAvailable) {
-            selectedRoom = &room;
-            break;
-        }
-    }
-
-    if (!selectedRoom) {
-        cout << "Room not available.\n";
-        return;
-    }
-
-    int nights;
-    cout << "Enter number of nights: ";
-    cin >> nights;
-
-    double rate = getRoomRate(selectedRoom->roomType);
-    double total = rate * nights;
-
-    Booking booking{guestName, roomNum, nights, total};
-    ofstream outFile("bookings.txt", ios::app);
-    outFile << booking.serialize() << endl;
-
-    selectedRoom->isAvailable = false;
-    saveRoomsToFile(rooms, "rooms.txt");
-
-    cout << "\nBooking confirmed!\n";
-    cout << "Receipt:\n";
-    cout << "Name: " << booking.guestName << "\nRoom: " << booking.roomNumber
-         << " (" << selectedRoom->roomType << ")\nNights: " << booking.nights
-         << "\nTotal Cost: $" << fixed << setprecision(2) << booking.totalCost << endl;
-}
-
-void cancelBooking(const string& guestName){
-    vector<Booking> bookings;
-    ifstream inFile("bookings.txt");
-    string line;
-    while (getline(inFile, line)) {
-        bookings.push_back(Booking::deserialize(line));
-    }
-    inFile.close();
-
-    if(bookings.empty()) {
-        cout << "No bookings found.\n";
-        return;
-    }
-
-    int roomNum;
-    cout << "Enter room number to cancel booking: ";
-    cin >> roomNum;
-
-    bool found = false;
-    vector<Booking> updatedBookings;
-    for (const Booking& b : bookings) {
-        if (b.guestName == guestName && b.roomNumber == roomNum) {
-            found = true;
-        } else {
-            updatedBookings.push_back(b);
-        }
-    }
-
-    if (!found) {
-        cout << "Booking not found.\n";
-        return;
-    }
-
-    // Update the room's availability
-    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
-    for (Room& room : rooms){
-        if(room.roomNumber == roomNum){
-            room.isAvailable = true;
-            break;
-        }
-    }
-    saveRoomsToFile(rooms, "rooms.txt");
-
-    // Update bookings
-    ofstream outFile("bookings.txt");
-    for (const Booking& b : updatedBookings){
-        outFile << b.serialize() << endl;
-    }
-    cout << "Booking has been cancelled.\n";
-}
-
-void showAllBookings(){
-    ifstream inFile("bookings.txt");
-    if (!inFile){
-        cout<<"No bookings found,\n";
-        return;
-    }
-
-    string line;
-    cout << "\nAll Bookings:\n";
-    while (getline(inFile, line)){
-        Booking b = Booking::deserialize(line);
-        if (b.roomNumber != -1){
-            cout << "Name: " << b.guestName
-                 << ", Room " << b.roomNumber
-                 << ", Nights: " << b.nights
-                 << ", Total Cost: $" << fixed << setprecision(2) << b.totalCost << endl;
-        }
-    }
-}
-
-void cancelBookingByAdmin() {
-    
-    showAllBookings();
-
-    vector<Booking> bookings;
-    ifstream inFile("bookings.txt");
-    string line;
-    while (getline(inFile, line)) {
-        bookings.push_back(Booking::deserialize(line));
-    }
-    inFile.close();
-
-    if (bookings.empty()) {
-        cout << "No bookings found.\n";
-        return;
-    }
-
-    string guestName;
-    int roomNumber;
-    cout << "Enter guest name: ";
-    cin.ignore();
-    getline(cin, guestName);
-    cout << "Enter room number to cancel: ";
-    cin >> roomNumber;
-
-    bool found = false;
-    vector<Booking> updatedBookings;
-    for (const Booking& b : bookings) {
-        if (b.guestName == guestName && b.roomNumber == roomNumber) {
-            found = true;
-            continue; // skip this booking
-        }
-        updatedBookings.push_back(b);
-    }
-
-    ofstream outFile("bookings.txt");
-    for (const Booking& b : updatedBookings) {
-        outFile << b.serialize() << endl;
-    }
-    outFile.close();
-
-    // Update room availability
-    vector<Room> rooms = loadRoomsFromFile("rooms.txt");
-    for (Room& r : rooms) {
-        if (r.roomNumber == roomNumber) {
-            r.isAvailable = true;
-            break;
-        }
-    }
-    saveRoomsToFile(rooms, "rooms.txt");
-
-    if (found) {
-        cout << "Booking cancelled successfully.\n";
-    } else {
-        cout << "Booking not found.\n";
-    }
-}
-
-void makeBookingAdmin(){
-    cin.ignore();
-    string guest;
-    cout << "Enter guest name: ";
-    getline(cin, guest);
-    makeBooking(guest); 
->>>>>>> main
 }
 
 // ----------------- User Base Class -----------------
@@ -444,7 +220,6 @@ public:
     void showMenu() override {
         int choice;
         do {
-<<<<<<< HEAD
             cout << "\n--- Guest Menu ---\n";
             cout << "1. View Available Rooms\n2. Book a Room\n3. Cancel Booking\n4. View My Bookings\n5. Exit\nChoice: ";
             while (!(cin >> choice) || choice < 1 || choice > 5) {
@@ -458,18 +233,6 @@ public:
                 case 3: cancelBooking(); break;
                 case 4: viewMyBookings(); break;
                 case 5: cout << "Goodbye, " << username << "!\n"; break;
-=======
-            cout << "\nGuest Menu:\n1. Show Available Rooms\n2. Show Room Rates\n3. Make Booking\n4. Cancel Booking\n5. Logout\nChoice: ";
-            cin >> choice;
-
-            switch (choice) {
-                case 1: showAvailableRooms(); break;
-                case 2: showRoomRates(); break;
-                case 3: makeBooking(username); break;
-                case 4: cancelBooking(username); break;
-                case 5: return;
-                default: cout << "Invalid choice.\n";
->>>>>>> main
             }
         } while (choice != 5);
     }
@@ -1057,3 +820,5 @@ int main() {
 }
 
 //teehee
+
+//!
